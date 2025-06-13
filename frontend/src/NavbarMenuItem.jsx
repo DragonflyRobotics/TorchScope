@@ -1,14 +1,20 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCaretDown } from '@fortawesome/free-solid-svg-icons'
+import { faCaretDown, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
+import { useState } from 'react';
 
 function NavbarMenuItem({name = "Sample", items = ["Item 1", "Item 2", "Item 3"]}) {
+    const [selection, setSelection] = useState(name);
+
     return (
         <Menu as="div" className="w-80 bg-primary-translucent rounded-full p-4 flex items-center relative">
             <div className="w-full">
                 <MenuButton className="flex w-full items-center justify-between">
                     <div className="text-text-color text-lg font-semibold">
-                        {name}
+                        {selection}
+                        {selection === name ? 
+                        <FontAwesomeIcon className="pl-2" icon={faTriangleExclamation} />
+                        : null}
                     </div>
                     <FontAwesomeIcon className="text-text-color" icon={faCaretDown} />
                 </MenuButton>
@@ -20,12 +26,15 @@ function NavbarMenuItem({name = "Sample", items = ["Item 1", "Item 2", "Item 3"]
                 <div className="py-1">
                     {items.map((item, index) => (
                         <MenuItem key={index}>
-                            <a
+                            <button
                                 href="#"
-                                className="block px-4 py-2 text-sm text-gray-700 data-focus:bg-primary-translucent data-focus:text-gray-900 data-focus:outline-hidden"
+                                className="w-full text-left block px-4 py-2 text-sm text-gray-700 data-focus:bg-primary-translucent data-focus:text-gray-900 data-focus:outline-hidden"
+                                onClick={() => {
+                                    setSelection(item);
+                                }}
                             >
                                 {item}
-                            </a>
+                            </button>
                         </MenuItem>
                     ))}
                 </div>

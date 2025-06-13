@@ -14,6 +14,20 @@ export function ColorSlider({ value, setCurrentValue, min, max, step}) {
     )
 }
 
+function onChangeHandler(setCurrentValue) {
+    return (value) => {
+        //send post request to the server with the new value 
+        fetch('http://localhost:8000/api/update-parameter', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ value }),
+        })
+        setCurrentValue(value);
+    }
+}
+
 function Parameter({name, min, max, step, startValue}) {
     // This component represents a single parameter with a slider.
     const [currentValue, setCurrentValue] = useState(startValue);
@@ -23,7 +37,7 @@ function Parameter({name, min, max, step, startValue}) {
                 <label className="block mb-2 text-sm font-medium text-gray-700">{name}</label>
                 <span className="text-sm text-gray-500">Value: {currentValue}</span>
             </div>
-            <ColorSlider value={currentValue} setCurrentValue={setCurrentValue} min={min} max={max} step={step} />
+            <ColorSlider value={currentValue} setCurrentValue={onChangeHandler(setCurrentValue)} min={min} max={max} step={step} />
         </div>
     )
 }
