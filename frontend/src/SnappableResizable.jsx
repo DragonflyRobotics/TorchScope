@@ -11,8 +11,8 @@ function SnappableResizable({ children }) {
     const gridSize = 100;
     const [size, setSize] = useState({ width: 400, height: 300 });
     //Not actual max width/height, just for random positioning
-    const maxWidth = snapToGrid(window.innerWidth - 2 * gridSize, gridSize); // 50px padding
-    const maxHeight = snapToGrid(window.innerHeight - 2 * gridSize, gridSize); // 50px padding
+    const maxWidth = snapToGrid(window.innerWidth - 4 * gridSize, gridSize); // 50px padding
+    const maxHeight = snapToGrid(window.innerHeight - 3 * gridSize, gridSize); // 50px padding
     const randomPositionX = Math.floor(Math.random() * (maxWidth / gridSize)) * gridSize;
     const randomPositionY = Math.floor(Math.random() * (maxHeight / gridSize)) * gridSize;
     const [position, setPosition] = useState({ 

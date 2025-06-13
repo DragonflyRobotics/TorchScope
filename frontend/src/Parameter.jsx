@@ -2,7 +2,7 @@ import { Slider } from "@/components/ui/slider";
 import React from 'react';
 import { useState } from 'react';
 
-export function ColorSlider({ value, setCurrentValue, min = 0, max = 100, step = 1 }) {
+export function ColorSlider({ value, setCurrentValue, min, max, step}) {
     return (
         <Slider
             value={[value]}
@@ -14,7 +14,7 @@ export function ColorSlider({ value, setCurrentValue, min = 0, max = 100, step =
     )
 }
 
-function Parameter({name = "Parameter 1", min = 0, max = 100, step = 1, startValue = 50}) {
+function Parameter({name, min, max, step, startValue}) {
     // This component represents a single parameter with a slider.
     const [currentValue, setCurrentValue] = useState(startValue);
     return (

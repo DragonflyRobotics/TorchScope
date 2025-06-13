@@ -14,7 +14,7 @@ function ResponsivePlot({ data, layout, config }) {
                         width,
                         height,
                         autosize: false,
-                        margin: { t: 30, l: 30, r: 30, b: 30 },
+                        margin: { t: 60, l: 30, r: 30, b: 30 },
                     }}
                     config={{ responsive: true, ...config }}
                 />

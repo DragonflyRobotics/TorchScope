@@ -1,7 +1,7 @@
 import ResponsivePlot from "../ResponsivePlot";
 import SnappableResizable from "../SnappableResizable";
 
-function LinePlot({x, y}) {
+function LinePlot({x, y, name}) {
     const plot_data = 
         {
             mode: 'lines+markers',
@@ -26,7 +26,9 @@ function LinePlot({x, y}) {
 
                 }]}
                 layout={{
-                    title: "Nice Responsive Plot",
+                    title: {
+                        text: name,
+                    },
                     ...plot_font,
                 }}
             />
