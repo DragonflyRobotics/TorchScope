@@ -9,8 +9,16 @@ function snapToGrid(value, gridSize) {
 
 function SnappableResizable({ children }) {
     const gridSize = 100;
-    const [position, setPosition] = useState({ x: 100, y: 100 });
     const [size, setSize] = useState({ width: 400, height: 300 });
+    //Not actual max width/height, just for random positioning
+    const maxWidth = snapToGrid(window.innerWidth - 2 * gridSize, gridSize); // 50px padding
+    const maxHeight = snapToGrid(window.innerHeight - 2 * gridSize, gridSize); // 50px padding
+    const randomPositionX = Math.floor(Math.random() * (maxWidth / gridSize)) * gridSize;
+    const randomPositionY = Math.floor(Math.random() * (maxHeight / gridSize)) * gridSize;
+    const [position, setPosition] = useState({ 
+        x: randomPositionX,
+        y: randomPositionY,
+    });
 
     return (
         <Rnd
@@ -36,7 +44,7 @@ function SnappableResizable({ children }) {
             bounds="parent"
             className="z-10"
         >
-            <div className="w-full h-full relative shadow-lg rounded-md">
+            <div className="w-full h-full relative shadow-lg rounded-lg border border-primary-translucent">
                 <div className="custom-drag-handle absolute top-0 left-0 p-2 cursor-move z-20">
                     <div className="w-5 h-5 bg-primary-translucent rounded-full flex items-center justify-center">
                         <FontAwesomeIcon className="w-3 h-3" icon={faUpDownLeftRight} />

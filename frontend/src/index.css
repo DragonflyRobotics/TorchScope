@@ -10,6 +10,7 @@
     --color-base: rgb(30, 30, 46);
     --color-light-foreground: rgba(217, 217, 217, 0.55);
     --color-primary-translucent: rgba(238, 107, 60, 0.60);
+    --color-primary: rgb(238, 107, 60);
     --color-text-color: rgb(255, 255, 255);
     --color-light-white: rgb(186, 194, 222);
 }
