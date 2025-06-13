@@ -9,11 +9,17 @@
         "start:backend": "uvicorn torchscope.main:app --reload --host 127.0.0.1 --port 8000 --app-dir ../backend/src"
     },
     "dependencies": {
+        "@fortawesome/fontawesome-svg-core": "^6.7.2",
+        "@fortawesome/free-solid-svg-icons": "^6.7.2",
+        "@fortawesome/react-fontawesome": "^0.2.2",
+        "@headlessui/react": "^2.2.4",
+        "@tailwindcss/vite": "^4.1.10",
         "axios": "^1.9.0",
         "plotly.js": "^3.0.1",
         "react": "^19.1.0",
         "react-dom": "^19.1.0",
-        "react-plotly.js": "^2.6.0"
+        "react-plotly.js": "^2.6.0",
+        "tailwindcss": "^4.1.10"
     },
     "devDependencies": {
         "@eslint/js": "^9.25.0",
