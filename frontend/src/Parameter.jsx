@@ -1,12 +1,36 @@
 import { Slider } from "@/components/ui/slider";
 import React from 'react';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { useAppData } from "./AppDataContext";
+import Loading from "./Loading";
 
-export function ColorSlider({ value, setCurrentValue, min, max, step}) {
+export function ColorSlider({ value, onCommit, onChange, min, max, step}) {
+    const isDragging = useRef(false);
+    const [ undecidedValue, setUndecidedValue ] = useState(value);
+
+    function handlePointerDown() {
+        isDragging.current = true;
+    }
+
+    function handlePointerUp() {
+        if (isDragging.current) {
+            isDragging.current = false;
+            onCommit(undecidedValue);
+        }
+    }
     return (
         <Slider
             value={[value]}
-            onValueChange={(val) => setCurrentValue(val[0])}
+            onValueChange={(newValue) => {onChange(newValue[0]); setUndecidedValue(newValue[0]);}}
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            onBlur={() => {
+                // Handle keyboard interactions finishing
+                if (isDragging.current) {
+                    isDragging.current = false;
+                    onCommit(undecidedValue);
+                }
+            }}
             min={min} 
             max={max}
             step={step}
@@ -14,33 +38,25 @@ export function ColorSlider({ value, setCurrentValue, min, max, step}) {
     )
 }
 
-function onChangeHandler(name, setCurrentValue) {
+function commitValue(name, setBarPos, updateParameter) {
+    // Send the updated value to the backend
     return (value) => {
-        //send post request to the server with the new value 
-        fetch('http://localhost:8000/api/update-parameter', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ name: name, value: value }),
-        })
-        setCurrentValue(value);
+        updateParameter(name, value);
+        setBarPos(value);
     }
 }
 
 function Parameter({name, min, max, step, startValue}) {
     // This component represents a single parameter with a slider.
-    const [currentValue, setCurrentValue] = useState(startValue);
-    if (currentValue !== startValue) {
-        setCurrentValue(startValue);
-    }
+    const [barPos, setBarPos] = useState(startValue);
+    const { data, updateParameter } = useAppData();
     return (
         <div className="w-full m-1 border border-gray-200 rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
                 <label className="block mb-2 text-sm font-medium text-gray-700">{name}</label>
-                <span className="text-sm text-gray-500">Value: {currentValue}</span>
+                <span className="text-sm text-gray-500">Value: {barPos}</span>
             </div>
-            <ColorSlider value={currentValue} setCurrentValue={onChangeHandler(name, setCurrentValue)} min={min} max={max} step={step} />
+            <ColorSlider value={barPos} onCommit={commitValue(name, setBarPos, updateParameter)} onChange={setBarPos} min={min} max={max} step={step} />
         </div>
     )
 }

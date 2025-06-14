@@ -3,18 +3,19 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCaretDown, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
 import { useState } from 'react';
 
-function NavbarMenuItem({name = "Sample", items = ["Item 1", "Item 2", "Item 3"]}) {
-    const [selection, setSelection] = useState(name);
+import { useAppData } from './AppDataContext.jsx'
+
+function NavbarMenuItem({name, items, selected}) {
+    const {selectInstance} = useAppData();
 
     return (
         <Menu as="div" className="w-80 bg-primary-translucent rounded-full p-4 flex items-center relative">
             <div className="w-full">
                 <MenuButton className="flex w-full items-center justify-between">
                     <div className="text-text-color text-lg font-semibold">
-                        {selection}
-                        {selection === name ? 
-                        <FontAwesomeIcon className="pl-2" icon={faTriangleExclamation} />
-                        : null}
+                        {selected === null ? 
+                            <>{name}<FontAwesomeIcon className="pl-2" icon={faTriangleExclamation} /></>
+                            : <>{selected}</>}
                     </div>
                     <FontAwesomeIcon className="text-text-color" icon={faCaretDown} />
                 </MenuButton>
@@ -30,14 +31,7 @@ function NavbarMenuItem({name = "Sample", items = ["Item 1", "Item 2", "Item 3"]
                                 href="#"
                                 className="w-full text-left block px-4 py-2 text-sm text-gray-700 data-focus:bg-primary-translucent data-focus:text-gray-900 data-focus:outline-hidden"
                                 onClick={() => {
-                                    fetch('http://localhost:8000/api/selected-instance', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                        },
-                                        body: JSON.stringify({ type: name, selection: item}),
-                                    })
-                                    setSelection(item);
+                                    selectInstance(name, item);
                                 }}
                             >
                                 {item}

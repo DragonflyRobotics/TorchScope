@@ -1,8 +1,26 @@
 import NavbarMenuItem from './NavbarMenuItem.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCaretDown } from '@fortawesome/free-solid-svg-icons'
+import { useAppData } from './AppDataContext.jsx'
 
-function Navbar({projects=["Project 1", "Project 2", "Project 3"], models=["Model 1", "Model 2", "Model 3"], runs=["Run 1", "Run 2", "Run 3"]}) {
+function Navbar() {
+    const { data } = useAppData();
+    const projects = data.projects;
+    const models = data.models;
+    const runs = data.runs;
+    let selectedProject = null;
+    if (data.selected_project) {
+        selectedProject = data.selected_project;
+    }
+    let selectedModel = null;
+    if (data.selected_model) {
+        selectedModel = data.selected_model;
+    }
+    let selectedRun = null; //data.selected_run;
+    if (data.selected_run) {
+        selectedRun = data.selected_run;
+    }
+
     return (
         <nav className="w-full h-14 bg-light-foreground rounded-xl m-6 drop-shadow-lg/90 flex items-center p-2 z-40">
             <div>
@@ -13,9 +31,9 @@ function Navbar({projects=["Project 1", "Project 2", "Project 3"], models=["Mode
                 />
             </div>
             <div className="flex w-full h-3/4 ml-4 mr-2 justify-between">
-                <NavbarMenuItem name="Projects" items={projects}/>
-                <NavbarMenuItem name="Models" items={models}/>
-                <NavbarMenuItem name="Runs" items={runs}/>
+                <NavbarMenuItem name="Projects" items={projects} selected={selectedProject}/>
+                <NavbarMenuItem name="Models" items={models} selected={selectedModel}/>
+                <NavbarMenuItem name="Runs" items={runs} selected={selectedRun}/>
             </div>
         </nav>
     )
