@@ -15,7 +15,7 @@ function App() {
                 .then(res => res.json())
                 .then(json => setData(json))
                 .catch(console.error);
-        }, 3000); // poll every 3 seconds
+        }, 30); // poll every 3 seconds
 
         return () => clearInterval(interval);
     }, []);

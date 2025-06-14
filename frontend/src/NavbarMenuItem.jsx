@@ -30,6 +30,13 @@ function NavbarMenuItem({name = "Sample", items = ["Item 1", "Item 2", "Item 3"]
                                 href="#"
                                 className="w-full text-left block px-4 py-2 text-sm text-gray-700 data-focus:bg-primary-translucent data-focus:text-gray-900 data-focus:outline-hidden"
                                 onClick={() => {
+                                    fetch('http://localhost:8000/api/selected-instance', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({ type: name, selection: item}),
+                                    })
                                     setSelection(item);
                                 }}
                             >
