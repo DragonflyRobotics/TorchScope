@@ -6,7 +6,7 @@
     "scripts": {
         "start": "concurrently \"npm run start:react\" \"npm run start:backend\"",
         "start:react": "vite",
-        "start:backend": "uvicorn torchscope.main:app --reload --host 127.0.0.1 --port 8000 --app-dir ../backend/src"
+        "start:backend": "uvicorn torchscope.main:app --reload --host 127.0.0.1 --port 8000 --app-dir ../backend/src --reload-dir ../backend/src"
     },
     "dependencies": {
         "@fortawesome/fontawesome-svg-core": "^6.7.2",
