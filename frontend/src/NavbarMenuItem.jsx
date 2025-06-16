@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { useAppData } from './AppDataContext.jsx'
 
 function NavbarMenuItem({name, items, selected}) {
-    const {selectInstance} = useAppData();
+    const {setSelectedProject, setSelectedModel, setSelectedRun} = useAppData();
 
     return (
         <Menu as="div" className="w-80 bg-primary-translucent rounded-full p-4 flex items-center relative">
@@ -31,7 +31,13 @@ function NavbarMenuItem({name, items, selected}) {
                                 href="#"
                                 className="w-full text-left block px-4 py-2 text-sm text-gray-700 data-focus:bg-primary-translucent data-focus:text-gray-900 data-focus:outline-hidden"
                                 onClick={() => {
-                                    selectInstance(name, item);
+                                    if (name === "Projects") {
+                                        setSelectedProject(item);
+                                    } else if (name === "Models") {
+                                        setSelectedModel(item);
+                                    } else if (name === "Runs") {
+                                        setSelectedRun(item);
+                                    }
                                 }}
                             >
                                 {item}
