@@ -1,13 +1,14 @@
 from fastapi import FastAPI, WebSocket
+from fastapi.websockets import WebSocketState
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import duckdb as db
-import time
 import asyncio
 
 from torchscope.db.utils import drop_run
 
 
+new_data_event = asyncio.Event()
 db_conn = db.connect("torchscope.db")
 
 drop_run(db_conn, 3821)
@@ -135,20 +136,26 @@ data = {
     "projects": [],
     "models": [],
     "runs": [],
-    "line_plots": [],
     "dynamic_params": [
-        {"name": "learning_rate", "value": 0.001, "min": 0.0001, "max": 0.01, "step": 0.0001},
+        {
+            "name": "learning_rate",
+            "value": 0.001,
+            "min": 0.0001,
+            "max": 0.01,
+            "step": 0.0001,
+        },
         {"name": "batch_size", "value": 32, "min": 8, "max": 128, "step": 8},
-        {"name": "num_epochs", "value": 10, "min": 1, "max": 100, "step": 1}
+        {"name": "num_epochs", "value": 10, "min": 1, "max": 100, "step": 1},
     ],
 }
+
+current_hash = None
 
 
 @app.get("/frontend/api/data")
 def get_data():
     global selected_project, selected_model, selected_run
-    # data["dynamic_params"] = []
-    data["line_plots"] = []
+    new_data_event.set()  # Trigger websocket update
     if "selected_project" not in data:
         data["projects"] = [
             row[0]
@@ -178,14 +185,6 @@ def get_data():
         """
             ).fetchall()
         ]
-    else:
-        df = db_conn.execute(f"""SELECT * FROM run_{data['selected_run']}""").df()
-        x_label = df.columns[0]
-        y_labels = df.columns[1:]
-        data["line_plots"] = [
-            {"x": df[x_label].tolist(), "y": df[y].tolist(), "name": y}
-            for y in y_labels
-        ]
 
     return data
 
@@ -198,6 +197,31 @@ def set_params(params: dict):
     ):
         p["value"] = params["value"]
 
+
+
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(update_data())
+
+
+async def update_data():
+    global data
+    while True:
+        if "selected_run" in data:
+            df = db_conn.execute(f"""SELECT * FROM run_{data['selected_run']}""").df()
+            x_label = df.columns[0]
+            y_labels = df.columns[1:]
+            new_row = {x_label: df[x_label].iloc[-1] + 1}
+            for y in y_labels:
+                new_row[y] = df[y].iloc[-1] + 1
+
+            df.loc[len(df)] = new_row  # only use with a RangeIndex!
+            db_conn.execute(
+                f"""INSERT INTO run_{data['selected_run']} VALUES ({', '.join(map(str, new_row.values()))})"""
+            )
+            new_data_event.set()
+        await asyncio.sleep(3)
     return {"status": "success", "message": "Parameters saved successfully"}
 
 
@@ -220,21 +244,41 @@ def set_project(params: dict):
             return {"status": "error", "message": "Invalid type"}
     return {"status": "success", "message": "Parameters saved successfully"}
 
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+    global current_hash
     await websocket.accept()
-    while True:
+    while websocket.client_state == WebSocketState.CONNECTED:
         try:
-            # data = await websocket.receive_text()
-            # print("Received from client:", data)
-            # await websocket.send_text(f"You said: {data}")
-            await websocket.send_text(f"Server time: {time.time()}")
-            await asyncio.sleep(1)
-            data = await websocket.receive_text()
-            print("Received from client:", data)
+            await new_data_event.wait()
+            new_data_event.clear()
+            if "selected_run" in data:
+                df = db_conn.execute(
+                    f"""SELECT * FROM run_{data['selected_run']}"""
+                ).df()
+                x_label = df.columns[0]
+                y_labels = df.columns[1:]
+                data["line_plots"] = [
+                    {"x": df[x_label].tolist(), "y": df[y].tolist(), "name": y}
+                    for y in y_labels
+                ]
+                await websocket.send_json(
+                    {
+                        "type": "update_graph",
+                        "data": data["line_plots"],
+                    }
+                )
+            else:
+                await websocket.send_json(
+                    {
+                        "type": "no_data",
+                    }
+                )
         except Exception as e:
             print("Client disconnected:", e)
             break
+
 
 def run():
     uvicorn.run("torchscope.main:app", host="127.0.0.1", port=8000, reload=True)
