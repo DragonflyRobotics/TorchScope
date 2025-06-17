@@ -24,28 +24,44 @@ with db.connect("torchscope.db") as db_conn:
     m1001 = new_model_session(db_conn, "torchscope")
     m1002 = new_model_session(db_conn, "visiontracker")
     m1003 = new_model_session(db_conn, "torchscope")
-    r3821 = new_run_session(db_conn, m1001, {
-                            "iteration": "INTEGER",
-                            "lr": "FLOAT",
-                            "loss": "FLOAT",
-                            "accuracy": "FLOAT",
-                            "val_loss": "FLOAT",
-                            })
-    r4141 = new_run_session(db_conn, m1001, {
-                            "iteration": "INTEGER",
-                            "lr": "FLOAT",
-                            "loss": "FLOAT",
-                            "accuracy": "FLOAT",
-                            })
-    r3912 = new_run_session(db_conn, m1002, {
-                            "iteration": "INTEGER",
-                            "lr": "FLOAT",
-                            "loss": "FLOAT",
-                            })
-    r4829 = new_run_session(db_conn, m1003, {
-                            "iteration": "INTEGER",
-                            "lr": "FLOAT",
-                            })
+    r3821 = new_run_session(
+        db_conn,
+        m1001,
+        {
+            "iteration": "INTEGER",
+            "lr": "FLOAT",
+            "loss": "FLOAT",
+            "accuracy": "FLOAT",
+            "val_loss": "FLOAT",
+        },
+    )
+    r4141 = new_run_session(
+        db_conn,
+        m1001,
+        {
+            "iteration": "INTEGER",
+            "lr": "FLOAT",
+            "loss": "FLOAT",
+            "accuracy": "FLOAT",
+        },
+    )
+    r3912 = new_run_session(
+        db_conn,
+        m1002,
+        {
+            "iteration": "INTEGER",
+            "lr": "FLOAT",
+            "loss": "FLOAT",
+        },
+    )
+    r4829 = new_run_session(
+        db_conn,
+        m1003,
+        {
+            "iteration": "INTEGER",
+            "lr": "FLOAT",
+        },
+    )
     insert_run_data(
         db_conn,
         r3821,
@@ -137,27 +153,12 @@ def get_projects():
 def get_models(project: dict):
     print(f"Fetching models for project: {project}")
     with db.connect("torchscope.db") as db_conn:
-        model_names =  [
-            row[0]
-            for row in db_conn.execute(
-                f"""
-            SELECT DISTINCT model_name FROM project_models
-            WHERE project = '{project['project']}'
-            ORDER BY timestamp ASC
-        """
-            ).fetchall()
-        ]
-        model_ids =  [
-            row[0]
-            for row in db_conn.execute(
-                f"""
-            SELECT DISTINCT model FROM project_models
-            WHERE project = '{project['project']}'
-            ORDER BY timestamp ASC
-        """
-            ).fetchall()
-        ]
-        return [{"model": model_id, "name": model_name}
+        model_names = get_models_from_project_ord(
+            db_conn, project["project"], "model_name"
+        )
+        model_ids = get_models_from_project_ord(db_conn, project["project"], "model")
+        return [
+            {"model": model_id, "name": model_name}
             for model_id, model_name in zip(model_ids, model_names)
         ]
 
@@ -166,27 +167,10 @@ def get_models(project: dict):
 def get_models(model: dict):
     print(f"Fetching run for project: {model}")
     with db.connect("torchscope.db") as db_conn:
-        run_names = [
-            row[0]
-            for row in db_conn.execute(
-                f"""
-            SELECT DISTINCT run_name FROM model_runs
-            WHERE model = '{model['model']}'
-            ORDER BY timestamp ASC 
-        """
-            ).fetchall()
-        ]
-        run_ids = [
-            row[0]
-            for row in db_conn.execute(
-                f"""
-            SELECT DISTINCT runs FROM model_runs
-            WHERE model = '{model['model']}'
-            ORDER BY timestamp ASC 
-        """
-            ).fetchall()
-        ]
-        return [{"run": run_id, "name": run_name}
+        run_names = get_runs_from_model_ord(db_conn, model["model"], "run_name")
+        run_ids = get_runs_from_model_ord(db_conn, model["model"], "runs")
+        return [
+            {"run": run_id, "name": run_name}
             for run_id, run_name in zip(run_ids, run_names)
         ]
 
@@ -272,9 +256,10 @@ async def websocket_endpoint(websocket: WebSocket):
                     data = {}
                     if current_run is not None:
                         with db.connect("torchscope.db") as db_conn:
-                            df = db_conn.execute(
-                                f"""SELECT * FROM run_{current_run}"""
-                            ).df()
+                            # df = db_conn.execute(
+                            #     f"""SELECT * FROM run_{current_run}"""
+                            # ).df()
+                            df = get_charts(db_conn, current_run)
                         x_label = df.columns[0]
                         y_labels = df.columns[1:]
                         data["line_plots"] = [
