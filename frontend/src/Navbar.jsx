@@ -9,6 +9,8 @@ function Navbar() {
     if (!projects) {
         return Loading;
     }
+    const modelNames = models.map(model => model.name);
+    const runNames = runs.map(run => run.name);
 
     return (
         <nav className="w-full h-14 bg-light-foreground rounded-xl m-6 drop-shadow-lg/90 flex items-center p-2 z-40">
@@ -21,8 +23,8 @@ function Navbar() {
             </div>
             <div className="flex w-full h-3/4 ml-4 mr-2 justify-between">
                 <NavbarMenuItem name="Projects" items={projects} selected={selectedProject}/>
-                <NavbarMenuItem name="Models" items={models} selected={selectedModel}/>
-                <NavbarMenuItem name="Runs" items={runs} selected={selectedRun}/>
+                <NavbarMenuItem name="Models" items={modelNames} selected={selectedModel}/>
+                <NavbarMenuItem name="Runs" items={runNames} selected={selectedRun}/>
             </div>
         </nav>
     )

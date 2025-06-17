@@ -49,13 +49,14 @@ export function AppDataProvider({ children }) {
 
     useEffect(() => {
         console.log("model selected", selectedModel);
+        console.log("models", models);
         setRuns([]);
         setSelectedRun(null);
         if (!selectedModel) return;
         fetch('http://localhost:8000/frontend/api/runs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: selectedModel }),
+            body: JSON.stringify({ model: models.find(m => m.name === selectedModel)?.model || null }),
         })
             .then(res => res.json())
             .then((res) => setRuns(res))
@@ -63,6 +64,8 @@ export function AppDataProvider({ children }) {
     }, [selectedModel]);
 
     useEffect(() => {
+        console.log("run selected", selectedRun);
+        console.log("runs", runs);
         if (selectedRun === null) {
             setGraphs([]);
             if (ws.current) {
@@ -70,7 +73,8 @@ export function AppDataProvider({ children }) {
             }
             return;
         }
-        ws.current.send(JSON.stringify({ type: 'selected_run', run: selectedRun.toString() })); // Request initial data
+        console.log("found", runs.find(r => r.name === selectedRun.toString())?.run);
+        ws.current.send(JSON.stringify({ type: 'selected_run', run: runs.find(r => r.name === selectedRun.toString())?.run || null })); // Request initial data
     }, [selectedRun]);
 
     const ws = useRef(null);
