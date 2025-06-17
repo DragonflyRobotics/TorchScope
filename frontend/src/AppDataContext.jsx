@@ -4,6 +4,7 @@ import Loading from './Loading.jsx';
 const AppDataContext = createContext();
 
 export function AppDataProvider({ children }) {
+    const clientId = crypto.randomUUID();
     const [data, setData] = useState(
         {
             "dynamic_params": [
@@ -82,7 +83,7 @@ export function AppDataProvider({ children }) {
 
     useEffect(() => {
         // Connect to the backend WebSocket
-        ws.current = new WebSocket("ws://localhost:8000/ws");
+        ws.current = new WebSocket(`ws://localhost:8000/ws?client_id=${clientId}`);
 
         ws.current.onopen = () => {
             console.log("WebSocket connected");

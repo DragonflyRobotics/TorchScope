@@ -5,8 +5,22 @@ import uvicorn
 import duckdb as db
 import asyncio
 
-from torchscope.db.utils import *
-from torchscope.db.basic import *
+from torchscope.db.utils import (
+    drop_run,
+    drop_project_models,
+    drop_model_runs,
+    drop_timestamp_project,
+    insert_run_data,
+)
+from torchscope.db.basic import (
+    new_project,
+    new_model_session,
+    new_run_session,
+    get_runs_from_model_ord,
+    get_models_from_project_ord,
+    get_charts,
+    get_projects_ord
+)
 
 
 new_data_event = asyncio.Event()
@@ -141,12 +155,7 @@ current_hash = None
 @app.get("/frontend/api/projects")
 def get_projects():
     with db.connect("torchscope.db") as db_conn:
-        return [
-            row[0]
-            for row in db_conn.execute(
-                "SELECT DISTINCT project FROM timestamp_project ORDER BY timestamp ASC"
-            ).fetchall()
-        ]
+        return get_projects_ord(db_conn)
 
 
 @app.post("/frontend/api/models")
@@ -189,7 +198,7 @@ def set_params(params: dict):
 #     asyncio.create_task(update_data())
 
 
-current_run = None
+current_run = {}
 
 
 async def update_data():
@@ -226,11 +235,12 @@ async def wait_for_data_event():
 
 
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_endpoint(websocket: WebSocket, client_id: str = None):
     # current_run = None
     global current_run
     await websocket.accept()
     while websocket.client_state == WebSocketState.CONNECTED:
+        print(current_run)
         try:
             done, pending = await asyncio.wait(
                 [
@@ -246,20 +256,20 @@ async def websocket_endpoint(websocket: WebSocket):
                     if data["type"] == "selected_run":
                         if data["run"] == "null":
                             print("No run selected, clearing current_run")
-                            current_run = None
+                            current_run[client_id] = None
                         else:
-                            current_run = data["run"]
+                            current_run[client_id] = data["run"]
                             print(f"Selected run: {current_run}")
                         new_data_event.set()  # Trigger data update
                 elif source == "event":
                     print("Data event triggered, updating graph")
                     data = {}
-                    if current_run is not None:
+                    if current_run[client_id] is not None:
                         with db.connect("torchscope.db") as db_conn:
                             # df = db_conn.execute(
                             #     f"""SELECT * FROM run_{current_run}"""
                             # ).df()
-                            df = get_charts(db_conn, current_run)
+                            df = get_charts(db_conn, current_run[client_id])
                         x_label = df.columns[0]
                         y_labels = df.columns[1:]
                         data["line_plots"] = [

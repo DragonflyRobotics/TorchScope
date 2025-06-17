@@ -1,4 +1,12 @@
-from torchscope.db.utils import *
+from torchscope.db.utils import (
+    create_run_table,
+    create_model_runs_table,
+    create_project_models_table,
+    create_timestamp_project_table,
+    insert_model_run,
+    insert_project_model,
+    insert_timestamp_project,
+)
 import uuid
 
 
@@ -111,4 +119,20 @@ def get_models_from_project_ord(db_conn, project_name: str, col_name: str):
         ]
     except Exception as e:
         print(f"Error fetching models for project {project_name}: {e}")
+        return []
+
+
+def get_projects_ord(db_conn):
+    try:
+        return [
+            row[0]
+            for row in db_conn.execute(
+                """
+            SELECT DISTINCT project FROM timestamp_project
+            ORDER BY timestamp ASC
+        """
+            ).fetchall()
+        ]
+    except Exception as e:
+        print(f"Error fetching projects: {e}")
         return []
