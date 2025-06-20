@@ -11,7 +11,7 @@ from torchscope.db.utils import (
     drop_model_runs,
     drop_timestamp_project,
     insert_run_data,
-    get_svg_from_model
+    get_svg_from_model,
 )
 from torchscope.db.basic import (
     new_project,
@@ -27,6 +27,7 @@ from torchscope.db.basic import (
 new_data_event = asyncio.Event()
 new_session_event = asyncio.Event()
 
+dynamic_params = {}
 
 app = FastAPI()
 # Allow your React dev server origin
@@ -44,14 +45,14 @@ def root():
     return {"message": "TorchScope backend running!"}
 
 
-current_hash = None
+
 
 @app.post("/user/register")
 def register_user(info: dict):
-    model = info["model"] 
+    model = info["model"]
     try:
         model_name = info["model_name"]
-    except KeyError: 
+    except KeyError:
         model_name = ""
     project = info["project"]
     schema = info["schema"]
@@ -73,10 +74,17 @@ def register_user(info: dict):
         r_id = new_run_session(db_conn, model, schema)
         new_session_event.set()  # Trigger new session event for websocket clients
 
-    return {"status": "success", "message": "Registered successfully", "model": model, "project": project, "run_id": r_id}
+    return {
+        "status": "success",
+        "message": "Registered successfully",
+        "model": model,
+        "project": project,
+        "run_id": r_id,
+    }
+
 
 @app.post("/user/data")
-def register_data(data: dict): 
+def register_data(data: dict):
     run_id = data["run_id"]
     data = data["data"]
     # print(f"Registering data for run {run_id}: {data}")
@@ -87,9 +95,9 @@ def register_data(data: dict):
         except Exception as e:
             print(f"Error inserting data: {e}")
             return {"status": "error", "message": str(e)}
-    response = {"status": "success", "message": "Data registered successfully"}
+    return {"status": "success", "message": "Data registered successfully"}
     
-    
+
 
 @app.get("/frontend/api/projects")
 def get_projects():
@@ -122,13 +130,16 @@ def get_models(model: dict):
             "runs": [
                 {"run": run_id, "name": run_name}
                 for run_id, run_name in zip(run_ids, run_names)
-            ]
+            ],
         }
 
 
 @app.post("/frontend/api/update-parameter")
-def set_params(params: dict):
-    print(params)
+def set_params(params: dict, client_id: str):
+    global dynamic_params
+    print(f"Setting parameters for client {client_id}: {params}")
+    dynamic_params[client_id] = params["dynamic_params"]
+    new_data_event.set()  # Trigger data update for websocket clients
     # for p in list(
     #     filter(lambda p: p["name"] == params["name"], data["dynamic_params"])
     # ):
@@ -167,16 +178,18 @@ async def wait_for_data_event():
     await new_data_event.wait()
     return ("event", [])
 
-async def wait_for_new_session_event(): 
+
+async def wait_for_new_session_event():
     await new_session_event.wait()
     return ("new_session", [])
 
 
 current_run = {}
 
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket, client_id: str):
-    global current_run
+    global current_run, dynamic_params
     await websocket.accept()
     current_run[client_id] = None
     while websocket.client_state == WebSocketState.CONNECTED:
@@ -210,8 +223,21 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                             #     f"""SELECT * FROM run_{current_run}"""
                             # ).df()
                             df = get_charts(db_conn, current_run[client_id])
+                        print("does it work", dynamic_params)
+                        print("my id", client_id)
                         x_label = df.columns[0]
                         y_labels = df.columns[1:]
+                        if dynamic_params.get(client_id) and len(list(filter(lambda p: p.get('name') == 'smoothing', dynamic_params.get(client_id)))) > 0:
+                            print("Smoothing parameter found")
+                            smoothing = list(filter(lambda p: p.get('name') == 'smoothing', dynamic_params[client_id]))[0].get('value')
+                            for y_name in y_labels:
+                                y = df[y_name]
+                                new_y = [y[0]]
+                                for i in range(1, len(y)):
+                                    new_y.append(
+                                        (new_y[-1] * smoothing) + (y[i] * (1 - smoothing))
+                                    )
+                                df[y_name] = new_y
                         data["line_plots"] = [
                             {"x": df[x_label].tolist(), "y": df[y].tolist(), "name": y}
                             for y in y_labels
@@ -229,7 +255,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                             }
                         )
                     new_data_event.clear()
-                elif source == "new_session": 
+                elif source == "new_session":
                     await websocket.send_json(
                         {
                             "type": "new_session",

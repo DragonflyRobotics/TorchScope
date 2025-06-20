@@ -4,13 +4,17 @@ import Loading from './Loading.jsx';
 const AppDataContext = createContext();
 
 export function AppDataProvider({ children }) {
-    const clientId = crypto.randomUUID();
+    const clientId = useRef(
+        sessionStorage.getItem("torchscope-client-id") || (() => {
+            const id = crypto.randomUUID();
+            sessionStorage.setItem("torchscope-client-id", id);
+            return id;
+        })()
+    ).current;
     const [data, setData] = useState(
         {
             "dynamic_params": [
-                { "name": "learning_rate", "value": 0.001, "min": 0.0001, "max": 0.01, "step": 0.0001 },
-                { "name": "learning_rate", "value": 0.001, "min": 0.0001, "max": 0.01, "step": 0.0001 },
-                { "name": "learning_rate", "value": 0.001, "min": 0.0001, "max": 0.01, "step": 0.0001 },
+                { "name": "smoothing", "value": 0.6, "min": 0.0, "max": 1.0, "step": 0.01 },
             ],
         }
     );
@@ -122,21 +126,52 @@ export function AppDataProvider({ children }) {
 
 
 
-    const updateParameter = useCallback(async (name, value) => {
+    const sendParameter = useCallback(async (name, value) => {
         try {
             setLoading(true);
-            const res = await fetch('http://localhost:8000/frontend/api/update-parameter', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, value }),
-            });
-            console.log(res);
+            const new_data = {
+                ...data,
+                dynamic_params: data.dynamic_params.map((param) =>
+                    param.name === name ? { ...param, value: value } : param
+                )
+            };
+            setData(new_data);
         } catch (error) {
             console.error(error);
         } finally {
             setLoading(false);
         }
     });
+
+
+    const updateParameter = useCallback(async (name, value) => {
+    try {
+        setLoading(true);
+
+        const new_data = {
+            ...data,
+            dynamic_params: data.dynamic_params.map((param) =>
+                param.name === name ? { ...param, value } : param
+            ),
+        };
+
+        setData(new_data);  // local update
+
+        const res = await fetch(`http://localhost:8000/frontend/api/update-parameter?client_id=${clientId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(new_data),
+        });
+
+        if (!res.ok) {
+            console.error("Error updating parameter:", res.statusText);
+        }
+    } catch (error) {
+        console.error("updateParameter error:", error);
+    } finally {
+        setLoading(false);
+    }
+}, [data, clientId]);
 
 
 
