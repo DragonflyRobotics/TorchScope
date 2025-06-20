@@ -5,6 +5,7 @@ import LinePlot from "./plots/LinePlot";
 import DynamicParameters from "./DynamicParameters";    
 import React, { useEffect, useState, useRef } from 'react';
 import Loading from "./Loading";
+import ModelSVG from "./ModelSVG";
 import { useAppData } from "./AppDataContext";
 
 
@@ -36,6 +37,7 @@ function App() {
                 ))
                 }
                 <DynamicParameters /> 
+                <ModelSVG />
             </div>
         </div>
     );

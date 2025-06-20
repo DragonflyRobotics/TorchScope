@@ -43,7 +43,8 @@ def create_project_models_table(db_conn):
             model     VARCHAR,
             model_name  VARCHAR,
             project   VARCHAR,
-            timestamp TIMESTAMP
+            timestamp TIMESTAMP,
+            svg      TEXT 
         );
         """
     )
@@ -96,12 +97,12 @@ def insert_model_run(db_conn, run_id: int, run_name: str, model_id: int):
         return
 
 
-def insert_project_model(db_conn, model_id: int, model_name: str, project: str):
+def insert_project_model(db_conn, model_id: int, model_name: str, project: str, svg: str):
     try:
         # Ensure the table exists before inserting
         db_conn.execute(
-            "INSERT INTO project_models (model, model_name, project, timestamp) VALUES (?, ?, ?, CURRENT_TIMESTAMP);",
-            (model_id, model_name, project),
+            "INSERT INTO project_models (model, model_name, project, timestamp, svg) VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?);",
+            (model_id, model_name, project, svg),
         )
     except Exception as e:
         print(f"Error inserting project model: {e}")
@@ -117,3 +118,18 @@ def insert_timestamp_project(db_conn, project: str):
     except Exception as e:
         print(f"Error inserting timestamp project: {e}")
         return
+
+
+def get_svg_from_model(db_conn, model_id: str):
+    try:
+        result = db_conn.execute(
+            f"SELECT svg FROM project_models WHERE model = '{model_id}'"
+        ).fetchone()
+        if result:
+            return result[0]
+        else:
+            print(f"No SVG found for model {model_id}")
+            return None
+    except Exception as e:
+        print(f"Error fetching SVG for model {model_id}: {e}")
+        return None

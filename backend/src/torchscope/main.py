@@ -11,6 +11,7 @@ from torchscope.db.utils import (
     drop_model_runs,
     drop_timestamp_project,
     insert_run_data,
+    get_svg_from_model
 )
 from torchscope.db.basic import (
     new_project,
@@ -24,6 +25,7 @@ from torchscope.db.basic import (
 
 
 new_data_event = asyncio.Event()
+new_session_event = asyncio.Event()
 
 
 app = FastAPI()
@@ -44,6 +46,50 @@ def root():
 
 current_hash = None
 
+@app.post("/user/register")
+def register_user(info: dict):
+    model = info["model"] 
+    try:
+        model_name = info["model_name"]
+    except KeyError: 
+        model_name = ""
+    project = info["project"]
+    schema = info["schema"]
+    svg = info["svg"]
+    with db.connect("torchscope.db") as db_conn:
+        if project not in get_projects_ord(db_conn):
+            print(f"Creating new project: {project}")
+            new_project(db_conn, project)
+
+        if model not in get_models_from_project_ord(db_conn, project, "model"):
+            print(f"Creating new model session: {model}")
+            if len(model_name) > 0:
+                new_model_session(db_conn, model, project, svg, model_name=model_name)
+                print(f"Creating new run session: {model} - {model_name}")
+            else:
+                new_model_session(db_conn, model, project, svg)
+        else:
+            print(f"Model {model} already exists in project {project}")
+        r_id = new_run_session(db_conn, model, schema)
+        new_session_event.set()  # Trigger new session event for websocket clients
+
+    return {"status": "success", "message": "Registered successfully", "model": model, "project": project, "run_id": r_id}
+
+@app.post("/user/data")
+def register_data(data: dict): 
+    run_id = data["run_id"]
+    data = data["data"]
+    # print(f"Registering data for run {run_id}: {data}")
+    with db.connect("torchscope.db") as db_conn:
+        try:
+            insert_run_data(db_conn, run_id, data)
+            new_data_event.set()  # Trigger data update for websocket clients
+        except Exception as e:
+            print(f"Error inserting data: {e}")
+            return {"status": "error", "message": str(e)}
+    response = {"status": "success", "message": "Data registered successfully"}
+    
+    
 
 @app.get("/frontend/api/projects")
 def get_projects():
@@ -71,10 +117,13 @@ def get_models(model: dict):
     with db.connect("torchscope.db") as db_conn:
         run_names = get_runs_from_model_ord(db_conn, model["model"], "run_name")
         run_ids = get_runs_from_model_ord(db_conn, model["model"], "runs")
-        return [
-            {"run": run_id, "name": run_name}
-            for run_id, run_name in zip(run_ids, run_names)
-        ]
+        return {
+            "svg": get_svg_from_model(db_conn, model["model"]),
+            "runs": [
+                {"run": run_id, "name": run_name}
+                for run_id, run_name in zip(run_ids, run_names)
+            ]
+        }
 
 
 @app.post("/frontend/api/update-parameter")
@@ -118,19 +167,25 @@ async def wait_for_data_event():
     await new_data_event.wait()
     return ("event", [])
 
+async def wait_for_new_session_event(): 
+    await new_session_event.wait()
+    return ("new_session", [])
+
+
+current_run = {}
 
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket, client_id: str = None):
-    # current_run = None
+async def websocket_endpoint(websocket: WebSocket, client_id: str):
     global current_run
     await websocket.accept()
+    current_run[client_id] = None
     while websocket.client_state == WebSocketState.CONNECTED:
-        print(current_run)
         try:
             done, pending = await asyncio.wait(
                 [
                     asyncio.create_task(wait_for_client(websocket)),
                     asyncio.create_task(wait_for_data_event()),
+                    asyncio.create_task(wait_for_new_session_event()),
                 ],
                 return_when=asyncio.FIRST_COMPLETED,
             )
@@ -174,6 +229,14 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = None):
                             }
                         )
                     new_data_event.clear()
+                elif source == "new_session": 
+                    await websocket.send_json(
+                        {
+                            "type": "new_session",
+                            "data": {},
+                        }
+                    )
+                    new_session_event.clear()
 
             # Cancel any pending tasks to avoid memory leaks
             for task in pending:

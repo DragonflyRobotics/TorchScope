@@ -38,8 +38,8 @@ def new_run_session(db_conn, model_id, columns: dict, run_name=None):
     return run_id
 
 
-def new_model_session(db_conn, project_name, model_name=None):
-    model_id = str(uuid.uuid4()).replace("-", "_")
+def new_model_session(db_conn, model, project_name, svg, model_name=None):
+    model_id = model
     result = db_conn.execute(
         f"""
             SELECT COUNT(*)
@@ -61,7 +61,8 @@ def new_model_session(db_conn, project_name, model_name=None):
         print(f"Creating new model with name: {name}")
     else:
         name = model_name
-    insert_project_model(db_conn, model_id, name, project_name)
+    print(f"Creating new model with name: {name}")
+    insert_project_model(db_conn, model_id, name, project_name, svg)
     insert_timestamp_project(db_conn, project_name)
     return model_id
 
@@ -89,6 +90,16 @@ def get_charts(db_conn, run_id: str):
 
 
 def get_runs_from_model_ord(db_conn, model_id: str, col_name: str):
+    result = db_conn.execute(
+        f"""
+        SELECT COUNT(*)
+            FROM information_schema.tables
+            WHERE table_name = 'model_runs'
+        """
+    ).fetchone()[0]
+    if result == 0:
+        print("Creating model_runs table as it does not exist.")
+        create_model_runs_table(db_conn)
     try:
         return [
             row[0]
@@ -106,6 +117,15 @@ def get_runs_from_model_ord(db_conn, model_id: str, col_name: str):
 
 
 def get_models_from_project_ord(db_conn, project_name: str, col_name: str):
+    result = db_conn.execute(
+        f"""
+        SELECT COUNT(*)
+            FROM information_schema.tables
+            WHERE table_name = 'project_models'
+        """
+    ).fetchone()[0]
+    if result == 0: 
+        create_project_models_table(db_conn)
     try:
         return [
             row[0]
@@ -123,6 +143,15 @@ def get_models_from_project_ord(db_conn, project_name: str, col_name: str):
 
 
 def get_projects_ord(db_conn):
+    result = db_conn.execute(
+        f"""
+        SELECT COUNT(*)
+            FROM information_schema.tables
+            WHERE table_name = 'timestamp_project'
+        """
+    ).fetchone()[0]
+    if result == 0:
+        create_timestamp_project_table(db_conn)
     try:
         return [
             row[0]

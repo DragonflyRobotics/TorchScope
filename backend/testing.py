@@ -1,6 +1,26 @@
 import torch
 import torchvision
 import torchvision.transforms as transforms
+import requests
+from torchscope.scope import *
+
+
+# url = "http://127.0.0.1:8000/user/register"
+# data = {
+#         "model": "23439852038309",
+#         "project": "test_project", 
+#         "schema": {
+#             "iteration": "INTEGER",
+#             "loss": "FLOAT",
+#         },
+# }
+# response = requests.post(url, json=data)
+# run_id = response.json().get("run_id")
+# print(f"Run ID: {run_id}")
+# exit()
+
+# url = "http://127.0.0.1:8000/user/data"
+
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -35,8 +55,8 @@ class Net(nn.Module):
         self.pool = nn.MaxPool2d(2, 2)
         self.conv2 = nn.Conv2d(6, 16, 5)
         self.fc1 = nn.Linear(16 * 5 * 5, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 10)
+        self.fc2 = nn.Linear(120, 85)
+        self.fc3 = nn.Linear(85, 10)
 
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
@@ -49,6 +69,10 @@ class Net(nn.Module):
 
 
 net = Net().to(DEVICE)
+
+scope = Scope("CIFAR10_Training", net)
+loss_scope = scope.get_data_handle("loss", DataType.FLOAT)
+scope.register()
 
 
 import torch.optim as optim
@@ -77,6 +101,18 @@ for epoch in range(2):  # loop over the dataset multiple times
         running_loss += loss.item()
         if i % 2000 == 1999:    # print every 2000 mini-batches
             print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 2000:.3f}')
+            loss_scope.update(running_loss / 2000)
+            # loss_scope.update(0.0)
+            scope.update((i+1) + (epoch+1) * len(trainloader))
             running_loss = 0.0
+            # data = [
+            #     {
+            #         "iteration": i + 1,
+            #         "loss": loss.item(),
+            #     }
+            # ]
+            # response = requests.post(url, json={"run_id": run_id, "data": data})
+        # if response.status_code == 200:
+        #     print("Data registered successfully.")
 
 print('Finished Training')

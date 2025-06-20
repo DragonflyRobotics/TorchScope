@@ -23,6 +23,7 @@ export function AppDataProvider({ children }) {
     const [projects, setProjects] = useState([]);
     const [models, setModels] = useState([]);
     const [runs, setRuns] = useState([]);
+    const [modelSVG, setModelSVG] = useState(null);
 
     useEffect(() => {
         // Fetch projects from the backend
@@ -60,15 +61,17 @@ export function AppDataProvider({ children }) {
             body: JSON.stringify({ model: models.find(m => m.name === selectedModel)?.model || null }),
         })
             .then(res => res.json())
-            .then((res) => setRuns(res))
+            .then((res) => {setRuns(res.runs); setModelSVG(res.svg)})
             .catch(err => console.error(err));
     }, [selectedModel]);
+
 
     useEffect(() => {
         console.log("run selected", selectedRun);
         console.log("runs", runs);
         if (selectedRun === null) {
             setGraphs([]);
+            setModelSVG(null);
             if (ws.current) {
                 ws.current.send(JSON.stringify({ type: 'selected_run', run: "null" })); // Request initial data
             }
@@ -105,6 +108,9 @@ export function AppDataProvider({ children }) {
                 setGraphs([]);
             } else if (message.type === 'request') {
                 console.log("Received request for data, sending current data");
+            } else if (message.type === 'new_session') {
+                console.log("New session started");
+                window.location.reload();
             }
         };
         ws.current.onclose = () => console.log("WebSocket disconnected");
@@ -135,7 +141,7 @@ export function AppDataProvider({ children }) {
 
 
     return (
-        <AppDataContext.Provider value={{ data, loading, updateParameter, graphs, projects, models, runs, selectedProject, setSelectedProject, selectedModel, setSelectedModel, selectedRun, setSelectedRun }}>
+        <AppDataContext.Provider value={{ data, loading, updateParameter, graphs, projects, models, runs, selectedProject, setSelectedProject, selectedModel, setSelectedModel, selectedRun, setSelectedRun, modelSVG }}>
             <>
                 {data && children}
                 {loading && (
